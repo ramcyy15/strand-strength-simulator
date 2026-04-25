@@ -1,0 +1,79 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Strand Strength Simulator</title>
+  <link rel="stylesheet" href="css/styles.css" />
+</head>
+<body>
+  <main class="app">
+    <header class="app-header">
+      <h1>Strand Strength Simulator</h1>
+    </header>
+
+    <section class="controls" aria-label="Simulation controls">
+      <div class="field">
+        <label for="tensile">Tensile strength (kg)</label>
+        <input
+          type="number"
+          id="tensile"
+          min="0"
+          step="0.01"
+          placeholder="e.g. 25"
+        />
+      <div class="field">
+        <label for="weight">Weight (kg)</label>
+        <input
+          type="number"
+          id="weight"
+          min="0"
+          step="0.01"
+          placeholder="e.g. 5"
+        />
+      </div>
+
+      <div class="actions">
+        <button id="runBtn" type="button" class="primary">Insert Weight
+        </button>
+        <button id="resetBtn" type="button" class="secondary">Reset</button>
+      </div>
+
+      <p id="validationMsg" class="validation" role="alert"></p>
+    </section>
+
+    <section class="stage" aria-label="Simulation stage">
+      <div class="ceiling" aria-hidden="true"></div>
+      <div class="ceiling-knot" aria-hidden="true"></div>
+
+      <svg
+        id="strandSvg"
+        class="strand-svg"
+        viewBox="0 0 600 380"
+        preserveAspectRatio="none"
+        aria-hidden="true"
+      >
+        <line id="ropeFull" x1="300" y1="30" x2="300" y2="240" />
+        <line id="ropeTop" x1="300" y1="30" x2="300" y2="120" />
+        <line id="ropeBottom" x1="300" y1="160" x2="300" y2="240" />
+      </svg>
+
+      <div id="weightBox" class="weight" aria-hidden="true">
+        <span id="weightLabel">0 kg</span>
+      </div>
+
+      <div id="resultBanner" class="result-banner" role="status"></div>
+    </section>
+
+    <section class="legend">
+      <h2>Reference values</h2>
+      <p class="hint">Click any row to load its tensile strength.</p>
+      <ul id="referenceList"></ul>
+    </section>
+  </main>
+
+  <script src="js/references.js"></script>
+  <script src="js/simulation.js"></script>
+  <script src="js/main.js"></script>
+</body>
+</html>
