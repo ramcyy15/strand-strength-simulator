@@ -1,5 +1,6 @@
 (function () {
   const GRAVITY = 1500;
+  const G = 9.8;
   const ANCHOR_Y = 24;
   const REST_RATIO = 0.62;
   const WEIGHT_W = 90;
@@ -12,6 +13,28 @@
   const SPRING_C = 4.2;
   const TOP_RECOIL_K = 220;
   const TOP_RECOIL_C = 8.0;
+
+  function computeInsights(tensileKg, weightKg, angleDeg) {
+    const safeAngle = Math.max(0, Math.min(angleDeg || 0, 89));
+    const angleRad = (safeAngle * Math.PI) / 180;
+    const cosA = Math.cos(angleRad);
+    const loadForce = weightKg * G;
+    const tensionForce = loadForce * cosA;
+    const capacityForce = tensileKg * G;
+    const utilization = capacityForce > 0 ? (tensionForce / capacityForce) * 100 : 0;
+    const safetyFactor = tensionForce > 0 ? capacityForce / tensionForce : Infinity;
+    const willHold = tensionForce <= capacityForce;
+    return {
+      loadForce,
+      tensionForce,
+      capacityForce,
+      utilization,
+      safetyFactor,
+      willHold,
+      angleDeg: safeAngle,
+      cosA,
+    };
+  }
 
   let rafId = null;
   let state = null;
@@ -39,11 +62,11 @@
     return { w, h };
   }
 
-  function setRopeFull(x, fromY, toY) {
-    dom.full.setAttribute("x1", x);
-    dom.full.setAttribute("y1", fromY);
-    dom.full.setAttribute("x2", x);
-    dom.full.setAttribute("y2", toY);
+  function setRopeFull(x1, y1, x2, y2) {
+    dom.full.setAttribute("x1", x1);
+    dom.full.setAttribute("y1", y1);
+    dom.full.setAttribute("x2", x2);
+    dom.full.setAttribute("y2", y2);
   }
 
   function setRopeBroken(anchorX, breakY, weightX, weightTopY, bottomLen) {
@@ -118,9 +141,11 @@
       const a = -SPRING_K * state.springY - SPRING_C * state.springV;
       state.springV += a * dt;
       state.springY += state.springV * dt;
-      const topY = state.restTopY + state.springY;
-      placeWeight(state.x, topY);
-      setRopeFull(state.x, ANCHOR_Y, topY);
+      const len = state.ropeLen + state.springY;
+      const wx = state.anchorX + len * state.sinA;
+      const wy = ANCHOR_Y + len * state.cosA;
+      placeWeight(wx, wy);
+      setRopeFull(state.anchorX, ANCHOR_Y, wx, wy);
 
       state.elapsed += dt;
       if (state.elapsed > 2.2 && Math.abs(state.springV) < 0.6 && Math.abs(state.springY) < 0.3) {
@@ -132,23 +157,23 @@
       const eased = t * t;
       const stretch = STRAIN_STRETCH * eased;
       const shake = (Math.random() - 0.5) * STRAIN_SHAKE * eased;
-      const topY = state.restTopY + stretch;
-      const xJitter = state.x + shake;
-      placeWeight(xJitter, topY);
-      setRopeFull(xJitter, ANCHOR_Y, topY);
+      const len = state.ropeLen + stretch;
+      const wx = state.anchorX + len * state.sinA + shake;
+      const wy = ANCHOR_Y + len * state.cosA;
+      placeWeight(wx, wy);
+      setRopeFull(state.anchorX, ANCHOR_Y, wx, wy);
 
       if (t >= 1) {
         state.phase = "falling";
         dom.svg.classList.add("snapped");
-        const totalLen = topY - ANCHOR_Y;
+        const totalLen = len;
         const breakRatio = 0.25 + Math.random() * 0.4;
-        state.breakY = ANCHOR_Y + totalLen * breakRatio;
-        state.bottomLen = totalLen - (state.breakY - ANCHOR_Y);
-        state.weightY = topY;
-        state.weightX = state.x;
+        state.bottomLen = totalLen * (1 - breakRatio);
+        state.weightY = wy;
+        state.weightX = wx;
         state.vy = 40;
         state.vx = (Math.random() - 0.5) * 30;
-        state.topY = state.breakY;
+        state.topY = ANCHOR_Y + totalLen * breakRatio;
         state.topV = -260;
         state.bannerShown = false;
         state.fallElapsed = 0;
@@ -167,7 +192,7 @@
 
       placeWeight(state.weightX, state.weightY);
       setRopeBroken(
-        w / 2,
+        state.anchorX,
         state.topY,
         state.weightX,
         state.weightY,
@@ -176,8 +201,9 @@
 
       state.fallElapsed += dt;
       if (!state.bannerShown && state.fallElapsed > 0.15) {
+        const overPct = Math.max(state.insights.utilization - 100, 0);
         showBanner(
-          `Snapped. ${formatKg(state.weight)} exceeds ${formatKg(state.tensile)} limit.`,
+          `Snapped. Tension ${state.insights.tensionForce.toFixed(1)} N exceeds ${state.insights.capacityForce.toFixed(1)} N (+${overPct.toFixed(0)}%).`,
           "failure"
         );
         state.bannerShown = true;
@@ -189,28 +215,39 @@
     }
   }
 
-  function runSimulation(tensileKg, weightKg) {
+  function runSimulation(tensileKg, weightKg, angleDeg) {
     cacheDom();
     cancelLoop();
     hideBanner();
     dom.svg.classList.remove("snapped");
 
+    const insights = computeInsights(tensileKg, weightKg, angleDeg);
     const size = syncViewBox();
-    const x = size.w / 2;
+    const anchorX = size.w / 2;
     const restTopY = size.h * REST_RATIO;
+    const ropeLen = restTopY - ANCHOR_Y;
+    const angleRad = (insights.angleDeg * Math.PI) / 180;
+    const sinA = Math.sin(angleRad);
+    const cosA = Math.cos(angleRad);
+    const restWX = anchorX + ropeLen * sinA;
+    const restWY = ANCHOR_Y + ropeLen * cosA;
 
     showWeight(formatKg(weightKg));
-    placeWeight(x, restTopY);
-    setRopeFull(x, ANCHOR_Y, restTopY);
+    placeWeight(restWX, restWY);
+    setRopeFull(anchorX, ANCHOR_Y, restWX, restWY);
 
-    const willHold = weightKg <= tensileKg;
+    const willHold = insights.willHold;
 
     state = {
       size,
       tensile: tensileKg,
       weight: weightKg,
-      x,
-      restTopY,
+      insights,
+      anchorX,
+      ropeLen,
+      angleRad,
+      sinA,
+      cosA,
       phase: willHold ? "held" : "strain",
       elapsed: 0,
       springY: 0,
@@ -219,16 +256,17 @@
     };
 
     if (willHold) {
-      const ratio = tensileKg > 0 ? Math.min(weightKg / tensileKg, 1) : 0;
+      const ratio = Math.min(insights.utilization / 100, 1);
       state.springY = HOLD_BOB_AMP + ratio * 18;
       state.springV = 0;
       showBanner(
-        `Held. ${formatKg(weightKg)} within ${formatKg(tensileKg)} limit.`,
+        `Held. ${insights.safetyFactor === Infinity ? "no" : insights.safetyFactor.toFixed(1) + "×"} safety factor at ${insights.utilization.toFixed(0)}% capacity.`,
         "success"
       );
     }
 
     startLoop();
+    return insights;
   }
 
   function resetSimulation() {
@@ -238,8 +276,9 @@
     const { w, h } = syncViewBox();
     dom.svg.classList.remove("snapped");
     const restTopY = h * REST_RATIO;
-    setRopeFull(w / 2, ANCHOR_Y, restTopY);
-    placeWeight(w / 2, restTopY);
+    const x = w / 2;
+    setRopeFull(x, ANCHOR_Y, x, restTopY);
+    placeWeight(x, restTopY);
     hideWeight();
     hideBanner();
   }
@@ -249,8 +288,9 @@
     cacheDom();
     const { w, h } = syncViewBox();
     if (dom.svg.classList.contains("snapped")) return;
-    setRopeFull(w / 2, ANCHOR_Y, h * REST_RATIO);
+    const x = w / 2;
+    setRopeFull(x, ANCHOR_Y, x, h * REST_RATIO);
   });
 
-  window.Simulation = { runSimulation, resetSimulation };
+  window.Simulation = { runSimulation, resetSimulation, computeInsights };
 })();

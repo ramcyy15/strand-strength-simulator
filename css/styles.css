@@ -57,8 +57,8 @@ body {
   border-radius: 14px;
   padding: 20px;
   display: grid;
-  grid-template-columns: 1fr 1fr;
-  gap: 16px;
+  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+  gap: 40px;
   box-shadow: var(--shadow);
 }
 
@@ -70,7 +70,7 @@ body {
 
 .field label {
   font-weight: 600;
-  font-size: 0.95rem;
+  font-size: 13px;
   letter-spacing: 0.3px;
 }
 
@@ -300,6 +300,122 @@ button:active {
   color: #fff;
   background: #000;
   border: 1px dashed #fff;
+}
+
+.insights {
+  background: var(--panel);
+  border: 1px solid var(--border);
+  border-radius: 14px;
+  padding: 18px 20px;
+  box-shadow: var(--shadow);
+}
+
+.insights h2 {
+  margin: 0 0 14px;
+  font-size: 1.05rem;
+  letter-spacing: 0.3px;
+}
+
+.meter-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  margin-bottom: 6px;
+  font-size: 0.85rem;
+  color: var(--muted);
+}
+
+.meter-value {
+  color: var(--accent);
+  font-variant-numeric: tabular-nums;
+  font-size: 0.95rem;
+}
+
+.meter {
+  position: relative;
+  height: 22px;
+  background: var(--panel-2);
+  border: 1px solid var(--border-strong);
+  border-radius: 999px;
+  overflow: hidden;
+  margin-bottom: 14px;
+}
+
+.meter-fill {
+  height: 100%;
+  width: 0%;
+  background: var(--accent);
+  transition: width 0.5s ease, background 0.3s ease;
+}
+
+.meter-fill.caution {
+  background: repeating-linear-gradient(
+    45deg,
+    #ffffff 0,
+    #ffffff 8px,
+    #a3a3a3 8px,
+    #a3a3a3 16px
+  );
+}
+
+.meter-fill.danger {
+  background: repeating-linear-gradient(
+    45deg,
+    #ffffff 0,
+    #ffffff 6px,
+    #525252 6px,
+    #525252 12px
+  );
+}
+
+.meter-mark {
+  position: absolute;
+  top: -2px;
+  bottom: -2px;
+  right: 0;
+  width: 2px;
+  background: var(--border-strong);
+  pointer-events: none;
+}
+
+.metrics {
+  list-style: none;
+  padding: 0;
+  margin: 0 0 12px;
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+  gap: 8px;
+}
+
+.metrics li {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 9px 12px;
+  background: var(--panel-2);
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  font-size: 0.9rem;
+}
+
+.metrics li span {
+  color: var(--muted);
+}
+
+.metrics li strong {
+  color: var(--accent);
+  font-variant-numeric: tabular-nums;
+}
+
+.verdict {
+  margin: 0;
+  padding: 10px 14px;
+  background: var(--panel-2);
+  border-left: 3px solid var(--accent);
+  border-radius: 4px;
+  font-size: 0.92rem;
+  line-height: 1.5;
+  color: var(--text);
 }
 
 .legend {
